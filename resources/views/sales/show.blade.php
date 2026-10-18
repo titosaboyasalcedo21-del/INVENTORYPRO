@@ -1,0 +1,19 @@
+<x-app-layout>
+    <x-slot name="header">
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ route('sales.index') }}">Ventas</a></li><li class="breadcrumb-item active" aria-current="page">{{ $sale->reference }}</li></ol></nav>
+        <div class="page-heading-row"><div><h1>Comprobante {{ $sale->reference }}</h1><p>Venta del {{ $sale->created_at->format('d/m/Y H:i') }} · {{ $sale->user?->name ?? 'Usuario eliminado' }}</p></div><div class="d-flex gap-2"><button class="btn btn-outline-secondary no-print" type="button" onclick="window.print()"><i class="bi bi-printer me-1" aria-hidden="true"></i>Imprimir</button><span class="status-pill {{ $sale->status === 'completed' ? 'status-complete' : 'status-cancelled' }} no-print"><span></span>{{ $sale->status === 'completed' ? 'Completada' : 'Cancelada' }}</span></div></div>
+    </x-slot>
+
+    @if($errors->has('sale'))<div class="alert alert-danger no-print">{{ $errors->first('sale') }}</div>@endif
+    <section class="data-card receipt-card">
+        <div class="receipt-brand"><span class="brand-mark"><i class="bi bi-box-seam-fill" aria-hidden="true"></i></span><div><strong>InventoryPro</strong><small>Comprobante de venta</small></div></div>
+        <div class="document-summary"><div><small>Cliente</small><strong>{{ $sale->customer?->name ?? 'Venta general' }}</strong></div><div><small>Fecha</small><strong>{{ $sale->created_at->format('d/m/Y H:i') }}</strong></div><div><small>Estado</small><strong>{{ $sale->status === 'completed' ? 'Completada' : 'Cancelada' }}</strong></div></div>
+        <div class="table-responsive"><table class="table data-table align-middle mb-0"><thead><tr><th>Producto</th><th>SKU</th><th class="text-end">Cantidad</th><th class="text-end">Precio unitario</th><th class="text-end">Importe</th></tr></thead><tbody>
+        @foreach($sale->items as $item)<tr><td>{{ $item->product_name }}</td><td><code class="sku-code">{{ $item->sku }}</code></td><td class="text-end">{{ number_format($item->quantity) }}</td><td class="text-end">{{ config('inventory.currency_symbol') }} {{ number_format($item->unit_price, 2) }}</td><td class="text-end">{{ config('inventory.currency_symbol') }} {{ number_format($item->line_total, 2) }}</td></tr>@endforeach
+        </tbody></table></div>
+        <div class="document-totals"><div><span>Subtotal</span><strong>{{ config('inventory.currency_symbol') }} {{ number_format($sale->subtotal, 2) }}</strong></div><div><span>Descuento</span><strong>− {{ config('inventory.currency_symbol') }} {{ number_format($sale->discount_amount, 2) }}</strong></div><div><span>Impuesto ({{ number_format($sale->tax_rate, 2) }}%)</span><strong>{{ config('inventory.currency_symbol') }} {{ number_format($sale->tax_amount, 2) }}</strong></div><div class="total"><span>Total</span><strong>{{ config('inventory.currency_symbol') }} {{ number_format($sale->total, 2) }}</strong></div></div>
+        <div class="payment-detail"><strong>Pago</strong>@foreach($sale->payments as $payment)<span>{{ ['cash'=>'Efectivo','card'=>'Tarjeta','transfer'=>'Transferencia','other'=>'Otro','refund'=>'Reintegro'][$payment->method] ?? $payment->method }} · {{ config('inventory.currency_symbol') }} {{ number_format($payment->amount, 2) }}</span>@endforeach</div>
+        @if($sale->notes)<p class="receipt-notes"><strong>Notas:</strong> {{ $sale->notes }}</p>@endif
+        @if($sale->status === 'completed')<div class="form-actions no-print"><form method="POST" action="{{ route('sales.cancel', $sale) }}" onsubmit="return confirm('¿Cancelar esta venta? Se devolverán las existencias y se registrará un reintegro.');">@csrf<button class="btn btn-outline-danger" type="submit"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Cancelar venta y devolver</button></form></div>@endif
+    </section>
+</x-app-layout>
